@@ -1,0 +1,7 @@
+[package]
+name = "vcard"
+version = "0.0.1"
+authors = ["Manuel Hoffmann <manuel@polythematik.de>"]
+
+[dependencies]
+chrono = "0.2"
