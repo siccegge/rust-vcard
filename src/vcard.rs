@@ -1,4 +1,42 @@
 use std::collections::HashMap;
+use std::str::FromStr;
+
+
+
+struct VCard {
+    // Every VCard has a version
+    version: Version,
+    // Every VCard at most one of these fields:
+    kind: Option<Kind>,
+    n: Option<N>,
+    bday: Option<Bday>,
+    anniversary: Option<Anniversary>,
+    gender: Option<Gender>,
+    prodid: Option<Prodid>,
+    rev: Option<Rev>,
+    uid: Option<Uid>,
+
+    // The arbitrary many fields
+    rfc_fields: HashMap<RfcProperty, Field>
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // A VCard has this general shape:
 //
@@ -25,8 +63,8 @@ use std::collections::HashMap;
 type Name = String;
 type Field = String;
 
-#[derive(Eq,Hash,PartialEq)]
-enum Properties {
+#[derive(Debug,Eq,Hash,PartialEq)]
+pub enum RfcProperty {
     Begin,
     End,
     Source,
@@ -74,31 +112,84 @@ enum Cardinality {
     Arbitrary
 }
 
-impl Properties {
+impl RfcProperty {
     fn get_cardinality(&self) -> Cardinality {
         match *self {
-            Properties::Begin | Properties::End | Properties::Version => Cardinality::ExactlyOne,
+            RfcProperty::Begin | RfcProperty::End | RfcProperty::Version => Cardinality::ExactlyOne,
             _ => Cardinality::Arbitrary
+        }
+    }
+
+    fn from_str(s: &str) -> Result<RfcProperty,()> {
+        match s {
+            "BEGIN" => Ok(RfcProperty::Begin),
+            "END" => Ok(RfcProperty::End),
+            "SOURCE" => Ok(RfcProperty::Source),
+            "KIND" => Ok(RfcProperty::Kind),
+            "XML" => Ok(RfcProperty::Xml),
+            "FN" => Ok(RfcProperty::Fn),
+            "N" => Ok(RfcProperty::N),
+            "NICKNAME" => Ok(RfcProperty::Nickname),
+            "PHOTO" => Ok(RfcProperty::Photo),
+            "BDAY" => Ok(RfcProperty::Bday),
+            "ANNIVERSARY" => Ok(RfcProperty::Anniversary),
+            "GENDER" => Ok(RfcProperty::Gender),
+            "ADR" => Ok(RfcProperty::Adr),
+            "TEL" => Ok(RfcProperty::Tel),
+            "EMAIL" => Ok(RfcProperty::Email),
+            "IMPP" => Ok(RfcProperty::Impp),
+            "LANG" => Ok(RfcProperty::Lang),
+            "TZ" => Ok(RfcProperty::Tz),
+            "GEO" => Ok(RfcProperty::Geo),
+            "TITLE" => Ok(RfcProperty::Title),
+            "ROLE" => Ok(RfcProperty::Role),
+            "LOGO" => Ok(RfcProperty::Logo),
+            "ORG" => Ok(RfcProperty::Org),
+            "MEMBER" => Ok(RfcProperty::Member),
+            "RELATED" => Ok(RfcProperty::Related),
+            "CATEGORIES" => Ok(RfcProperty::Categories),
+            "NOTE" => Ok(RfcProperty::Note),
+            "PRODID" => Ok(RfcProperty::Prodid),
+            "REV" => Ok(RfcProperty::Rev),
+            "SOUND" => Ok(RfcProperty::Sound),
+            "UID" => Ok(RfcProperty::Uid),
+            "CLIENTPIDMAP" => Ok(RfcProperty::Clientpidmap),
+            "URL" => Ok(RfcProperty::Url),
+            "VERSION" => Ok(RfcProperty::Version),
+            "KEY" => Ok(RfcProperty::Key),
+            "FBURL" => Ok(RfcProperty::Fburl),
+            "CALADRURI" => Ok(RfcProperty::Caladruri),
+            "CALURI" => Ok(RfcProperty::Caluri),
+            _ => Err(())
         }
     }
 }
 
-struct VCard {
-    // Every VCard has a version
-    version: Version,
-    // Every VCard at most one of these fields:
-    kind: Option<Kind>,
-    n: Option<N>,
-    bday: Option<Bday>,
-    anniversary: Option<Anniversary>,
-    gender: Option<Gender>,
-    prodid: Option<Prodid>,
-    rev: Option<Rev>,
-    uid: Option<Uid>,
+#[derive(Debug)]
+pub struct PropertyError;
 
-    // The arbitrary many fields
-    rfc_fields: HashMap<Properties, Field>
+
+#[derive(Debug)]
+pub struct Property {
+    group: Option<String>,
+    ptype: RfcProperty,
+    params: Option<String>,
+    value: String
 }
+
+
+impl Property {
+    pub fn new_from_strings(group: Option<&str>, name: &str, params: Option<&str>, value: &str) -> Property {
+        Property {
+            group: if group.is_some() { Some(group.unwrap().to_string()) } else { None },
+            ptype: RfcProperty::from_str(name).unwrap(),
+            params: if params.is_some() { Some(params.unwrap().to_string()) } else { None },
+            value: value.to_string()
+        }
+    }
+}
+
+
 
 // RFC 6350, 6.7.9
 // TODO: there could be params...
@@ -132,11 +223,11 @@ impl VCard {
         self.version.clone()
     }
 
-    pub fn get(&self, property: &Properties) -> Option<&Field> {
+    pub fn get(&self, property: &RfcProperty) -> Option<&Field> {
         self.rfc_fields.get(property)
     }
 
-    pub fn get_mut(&mut self, property: &Properties) -> Option<&mut Field> {
+    pub fn get_mut(&mut self, property: &RfcProperty) -> Option<&mut Field> {
         self.rfc_fields.get_mut(property)
     }
 }
@@ -186,12 +277,6 @@ type TextList = String;
 
 
 
-// RFC 6350, 6.1.3
-// TODO: there could be params...
-struct Source {
-    value: Uri
-}
-
 
 // RFC 6350, 6.1.4
 // TODO: there could be params...
@@ -204,34 +289,37 @@ enum Kind {
     IanaToken(String) // Todo maybe String is too general
 }
 
-// RFC 6350, 6.1.5
-// TODO: there could be params...
-struct Xml {
-    value: Text
-}
 
-// RFC 6350, 6.2.1
-// TODO: there could be params...
-struct Fn {
-    value: Text
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // RFC 6350, 6.2.2
 // TODO: there could be params...
 // TODO: the value here is list-component
 struct N;
-
-// RFC 6350, 6.2.3
-// TODO: there could be params...
-struct Nickname {
-    value: TextList
-}
-
-// RFC 6350, 6.2.4
-// TODO: there could be params...
-struct Photo {
-    value: Uri
-}
 
 // RFC 6350, 6.2.5
 // TODO: there could be params...
@@ -242,6 +330,7 @@ struct Bday;
 // TODO: there could be params...
 // TODO: more strange format thingy
 struct Anniversary;
+
 
 // RFC 6350, 6.2.7
 // TODO: there could be params...
@@ -258,84 +347,6 @@ enum Gender_ {
     U
 }
 
-// RFC 6350, 6.3.1
-// Mixture of list-components
-struct Adr;
-
-// RFC 6350, 6.4.1
-// TODO: there could be params with semantics
-struct Tel;
-
-// RFC 6350, 6.4.2
-// TODO: there could be params...
-struct Email {
-    value: Text
-}
-
-// RFC 6350, 6.4.3
-// TODO: there could be params...
-struct Impp {
-    value: Uri
-}
-
-// RFC 6350, 6.4.4
-// TODO: there could be params... and a language tag
-struct Lang;
-
-// RFC 6350, 6.5.1
-// TODO: there could be params... more strange things
-struct Tz;
-
-// RFC 6350, 6.5.2
-// TODO: there could be params...
-struct Geo {
-    value: Uri
-}
-
-// RFC 6350, 6.6.1
-// TODO: there could be params...
-struct Title {
-    value: Text
-}
-
-// RFC 6350, 6.6.2
-// TODO: there could be params...
-struct Role {
-    value: Text
-}
-
-// RFC 6350, 6.6.3
-// TODO: there could be params...
-struct Logo {
-    value: Uri
-}
-
-// RFC 6350, 6.6.4
-// TODO: there could be params... and something with components
-struct Org;
-
-// RFC 6350, 6.6.5
-// TODO: there could be params...
-struct Member {
-    value: Uri
-}
-
-// RFC 6350, 6.6.6
-// TODO: there could be params...
-struct Related;
-
-// RFC 6350, 6.7.1
-// TODO: there could be params...
-struct Categories {
-    value: TextList
-}
-
-// RFC 6350, 6.7.2
-// TODO: there could be params...
-struct Note {
-    value: Text
-}
-
 // RFC 6350, 6.7.3
 // TODO: there could be params...
 struct Prodid {
@@ -348,48 +359,7 @@ struct Rev {
     value: Timestamp
 }
 
-// RFC 6350, 6.7.5
-// TODO: there could be params...
-struct Sound {
-    value: Timestamp
-}
-
 // RFC 6350, 6.7.6
 // TODO: there could be params... and stuff
 struct Uid;
 
-// RFC 6350, 6.7.7
-// TODO: there could be params...
-struct Clientpidmap {
-    value: (Digit,Uri)
-}
-
-// RFC 6350, 6.7.8
-// TODO: there could be params...
-struct Url {
-    value: Uri
-}
-
-
-
-// RFC 6350, 6.8.1
-// TODO: there could be params... uri or text or..
-struct Key;
-
-// RFC 6350, 6.9.1
-// TODO: there could be params...
-struct Fburl {
-    value: Uri
-}
-
-// RFC 6350, 6.9.2
-// TODO: there could be params...
-struct Caladruri {
-    value: Uri
-}
-
-// RFC 6350, 6.9.3
-// TODO: there could be params...
-struct Caluri {
-    value: Uri
-}

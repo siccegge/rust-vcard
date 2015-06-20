@@ -1,5 +1,10 @@
+#![feature(plugin)]
+#![plugin(regex_macros)]
+extern crate regex;
+
 extern crate chrono;
 
+mod parser;
 mod vcard;
 
 // type Text = String;
