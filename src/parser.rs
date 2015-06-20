@@ -12,10 +12,12 @@ impl Parser {
 
     pub fn parse_vcard(&self, input: String) {
         let lines: Vec<String> = input.split("\n").map(|l| l.to_string()).collect();
-        let properties: Vec<Option<Property>> = merge_lines(lines).iter().map(|line| to_property(line)).collect();
+        let properties: Vec<Result<Property,_>> = merge_lines(lines).iter().map(|line| to_property(line)).collect();
     }
 
 }
+
+struct ParserError;
 
 /// A property can be split over multiple lines, e.g.
 /// 
@@ -50,7 +52,7 @@ fn merge_lines_at(mut lines: Vec<String>, index: usize) -> Vec<String> {
 
 
 /// Transforms one string representation of a property to a internal one
-fn to_property(line: &str) -> Option<Property> {
+fn to_property(line: &str) -> Result<Property,ParserError> {
     // The RFC defines a contentline as:
     //
     //     contentline = [group "."] name *(";" param) ":" value CRLF
@@ -71,7 +73,7 @@ fn to_property(line: &str) -> Option<Property> {
                 Some(v) => { name = v },
                 None => {
                     println!("line withouth name: {:?}", line);
-                    return None
+                    return Err(ParserError);
                 }
             }
             let value;
@@ -79,7 +81,7 @@ fn to_property(line: &str) -> Option<Property> {
                 Some(v) => { value = v },
                 None => {
                     println!("line withouth value: {:?}", line);
-                    return None
+                    return Err(ParserError);
                 }
             }
 
@@ -88,12 +90,15 @@ fn to_property(line: &str) -> Option<Property> {
 
         None => {
             println!("line withouth match: {:?}", line);
-            return None;
+            return Err(ParserError);
         }
     }
 
     println!("{:?}", property);
-    Some(property)
+    match property {
+        Ok(p) => Ok(p),
+        Err(_) => Err(ParserError)
+    }
 }
 
 

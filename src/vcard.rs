@@ -2,27 +2,63 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 
-
+#[derive(Debug)]
 struct VCard {
-    // Every VCard has a version
     version: Version,
-    // Every VCard at most one of these fields:
-    kind: Option<Kind>,
-    n: Option<N>,
-    bday: Option<Bday>,
-    anniversary: Option<Anniversary>,
-    gender: Option<Gender>,
-    prodid: Option<Prodid>,
-    rev: Option<Rev>,
-    uid: Option<Uid>,
+    properties: Vec<Property>
+}
 
-    // The arbitrary many fields
-    rfc_fields: HashMap<RfcProperty, Field>
+impl VCard {
+    /// Constructs a new VCard with all at least one FN element
+    pub fn new(_fn: Vec<String>) -> Option<VCard> {
+        if _fn.len() >= 1 {
+            return None;
+        }
+
+        Some(VCard {
+            version: Version::Four,
+            properties: Vec::new()
+        })
+    }
 }
 
 
 
+#[derive(Debug)]
+pub struct Property {
+    group: Option<String>,
+    ptype: PropertyType,
+    params: Option<String>,
+    value: ValueType
+}
 
+impl Property {
+    pub fn new_from_strings(group: Option<&str>, name: &str, params: Option<&str>, value: &str) -> Result<Property,PropertyError> {
+        let group_string = if group.is_some() { Some(group.unwrap().to_string()) } else { None };
+
+        let property = match PropertyType::from_str(name).unwrap() {
+            PropertyType::Source => Property::new_source(group_string, params, value),
+            _ => Err(PropertyError)
+        };
+
+        property
+    }
+
+    fn new_source(group_string: Option<String>, params: Option<&str>, value: &str) -> Result<Property,PropertyError> {
+        // the value of a source can only be an URI
+        let vuri = ValueType::URI(value.to_string());
+        Ok(Property {
+            group: group_string,
+            ptype: PropertyType::Source,
+            params: if params.is_some() { Some(params.unwrap().to_string()) } else { None },
+            value: vuri
+        })
+    }
+}
+
+
+#[derive(Debug)]
+pub struct PropertyError;
 
 
 
@@ -63,8 +99,14 @@ struct VCard {
 type Name = String;
 type Field = String;
 
+
+
+////////////////////////////////////////////////////////////////////
+/// Type of a property
+////////////////////////////////////////////////////////////////////
+
 #[derive(Debug,Eq,Hash,PartialEq)]
-pub enum RfcProperty {
+pub enum PropertyType {
     Begin,
     End,
     Source,
@@ -112,125 +154,110 @@ enum Cardinality {
     Arbitrary
 }
 
-impl RfcProperty {
+impl PropertyType {
     fn get_cardinality(&self) -> Cardinality {
         match *self {
-            RfcProperty::Begin | RfcProperty::End | RfcProperty::Version => Cardinality::ExactlyOne,
+            PropertyType::Begin | PropertyType::End | PropertyType::Version => Cardinality::ExactlyOne,
             _ => Cardinality::Arbitrary
         }
     }
 
-    fn from_str(s: &str) -> Result<RfcProperty,()> {
+    fn from_str(s: &str) -> Result<PropertyType,()> {
         match s {
-            "BEGIN" => Ok(RfcProperty::Begin),
-            "END" => Ok(RfcProperty::End),
-            "SOURCE" => Ok(RfcProperty::Source),
-            "KIND" => Ok(RfcProperty::Kind),
-            "XML" => Ok(RfcProperty::Xml),
-            "FN" => Ok(RfcProperty::Fn),
-            "N" => Ok(RfcProperty::N),
-            "NICKNAME" => Ok(RfcProperty::Nickname),
-            "PHOTO" => Ok(RfcProperty::Photo),
-            "BDAY" => Ok(RfcProperty::Bday),
-            "ANNIVERSARY" => Ok(RfcProperty::Anniversary),
-            "GENDER" => Ok(RfcProperty::Gender),
-            "ADR" => Ok(RfcProperty::Adr),
-            "TEL" => Ok(RfcProperty::Tel),
-            "EMAIL" => Ok(RfcProperty::Email),
-            "IMPP" => Ok(RfcProperty::Impp),
-            "LANG" => Ok(RfcProperty::Lang),
-            "TZ" => Ok(RfcProperty::Tz),
-            "GEO" => Ok(RfcProperty::Geo),
-            "TITLE" => Ok(RfcProperty::Title),
-            "ROLE" => Ok(RfcProperty::Role),
-            "LOGO" => Ok(RfcProperty::Logo),
-            "ORG" => Ok(RfcProperty::Org),
-            "MEMBER" => Ok(RfcProperty::Member),
-            "RELATED" => Ok(RfcProperty::Related),
-            "CATEGORIES" => Ok(RfcProperty::Categories),
-            "NOTE" => Ok(RfcProperty::Note),
-            "PRODID" => Ok(RfcProperty::Prodid),
-            "REV" => Ok(RfcProperty::Rev),
-            "SOUND" => Ok(RfcProperty::Sound),
-            "UID" => Ok(RfcProperty::Uid),
-            "CLIENTPIDMAP" => Ok(RfcProperty::Clientpidmap),
-            "URL" => Ok(RfcProperty::Url),
-            "VERSION" => Ok(RfcProperty::Version),
-            "KEY" => Ok(RfcProperty::Key),
-            "FBURL" => Ok(RfcProperty::Fburl),
-            "CALADRURI" => Ok(RfcProperty::Caladruri),
-            "CALURI" => Ok(RfcProperty::Caluri),
+            "BEGIN" => Ok(PropertyType::Begin),
+            "END" => Ok(PropertyType::End),
+            "SOURCE" => Ok(PropertyType::Source),
+            "KIND" => Ok(PropertyType::Kind),
+            "XML" => Ok(PropertyType::Xml),
+            "FN" => Ok(PropertyType::Fn),
+            "N" => Ok(PropertyType::N),
+            "NICKNAME" => Ok(PropertyType::Nickname),
+            "PHOTO" => Ok(PropertyType::Photo),
+            "BDAY" => Ok(PropertyType::Bday),
+            "ANNIVERSARY" => Ok(PropertyType::Anniversary),
+            "GENDER" => Ok(PropertyType::Gender),
+            "ADR" => Ok(PropertyType::Adr),
+            "TEL" => Ok(PropertyType::Tel),
+            "EMAIL" => Ok(PropertyType::Email),
+            "IMPP" => Ok(PropertyType::Impp),
+            "LANG" => Ok(PropertyType::Lang),
+            "TZ" => Ok(PropertyType::Tz),
+            "GEO" => Ok(PropertyType::Geo),
+            "TITLE" => Ok(PropertyType::Title),
+            "ROLE" => Ok(PropertyType::Role),
+            "LOGO" => Ok(PropertyType::Logo),
+            "ORG" => Ok(PropertyType::Org),
+            "MEMBER" => Ok(PropertyType::Member),
+            "RELATED" => Ok(PropertyType::Related),
+            "CATEGORIES" => Ok(PropertyType::Categories),
+            "NOTE" => Ok(PropertyType::Note),
+            "PRODID" => Ok(PropertyType::Prodid),
+            "REV" => Ok(PropertyType::Rev),
+            "SOUND" => Ok(PropertyType::Sound),
+            "UID" => Ok(PropertyType::Uid),
+            "CLIENTPIDMAP" => Ok(PropertyType::Clientpidmap),
+            "URL" => Ok(PropertyType::Url),
+            "VERSION" => Ok(PropertyType::Version),
+            "KEY" => Ok(PropertyType::Key),
+            "FBURL" => Ok(PropertyType::Fburl),
+            "CALADRURI" => Ok(PropertyType::Caladruri),
+            "CALURI" => Ok(PropertyType::Caluri),
             _ => Err(())
         }
     }
 }
 
-#[derive(Debug)]
-pub struct PropertyError;
 
+////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////
+/// Type of a value
+////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct Property {
-    group: Option<String>,
-    ptype: RfcProperty,
-    params: Option<String>,
-    value: String
+pub enum ValueType {
+    Text(String),
+    TextList(Vec<String>),
+    DateList(Vec<Date>),
+    TimeList(Vec<Time>),
+    DateTimeList(Vec<DateTime>),
+    DateAndOrTimeList(Vec<DateAndOrTime>),
+    TimestampList(Vec<Timestamp>),
+    Boolean(bool),
+    IntegerList(Vec<i64>),
+    FloatList(Vec<f64>),
+    URI(URI),
+    UtcOffset(UtcOffset),
+    LanguageTag(LanguageTag),
+    IanaValuespec(IanaValuespec)
 }
 
+type Date = String;
+type Time = String;
+type DateTime = String;
+type DateAndOrTime = String;
+type Timestamp = String;
+type URI = String;
+type UtcOffset = String;
+type LanguageTag = String;
+type IanaValuespec = String;
 
-impl Property {
-    pub fn new_from_strings(group: Option<&str>, name: &str, params: Option<&str>, value: &str) -> Property {
-        Property {
-            group: if group.is_some() { Some(group.unwrap().to_string()) } else { None },
-            ptype: RfcProperty::from_str(name).unwrap(),
-            params: if params.is_some() { Some(params.unwrap().to_string()) } else { None },
-            value: value.to_string()
-        }
-    }
-}
+
+
+
+
+
+
 
 
 
 // RFC 6350, 6.7.9
 // TODO: there could be params...
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug)]
 enum Version {
     Four
 }
 
-impl VCard {
-    /// Constructs a new VCard with all at least one FN element
-    pub fn new(_fn: Vec<String>) -> Option<VCard> {
-        if _fn.len() >= 1 {
-            return None;
-        }
-
-        Some(VCard {
-            version: Version::Four,
-            kind: None,
-            n: None,
-            bday: None,
-            anniversary: None,
-            gender: None,
-            prodid: None,
-            rev: None,
-            uid: None,
-            rfc_fields: HashMap::new()
-        })
-    }
-
-    pub fn get_version(&self) -> Version {
-        self.version.clone()
-    }
-
-    pub fn get(&self, property: &RfcProperty) -> Option<&Field> {
-        self.rfc_fields.get(property)
-    }
-
-    pub fn get_mut(&mut self, property: &RfcProperty) -> Option<&mut Field> {
-        self.rfc_fields.get_mut(property)
-    }
-}
 
 
 
@@ -246,32 +273,6 @@ impl VCard {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Just some placeholders
-type Uri = String;
-type Digit = String;
-type Text = String;
-type Timestamp = String;
-type TextList = String;
 
 
 
@@ -289,77 +290,4 @@ enum Kind {
     IanaToken(String) // Todo maybe String is too general
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// RFC 6350, 6.2.2
-// TODO: there could be params...
-// TODO: the value here is list-component
-struct N;
-
-// RFC 6350, 6.2.5
-// TODO: there could be params...
-// TODO: Some strange format
-struct Bday;
-
-// RFC 6350, 6.2.6
-// TODO: there could be params...
-// TODO: more strange format thingy
-struct Anniversary;
-
-
-// RFC 6350, 6.2.7
-// TODO: there could be params...
-struct Gender {
-    gender: Gender_,
-    value: Option<String>
-}
-
-enum Gender_ {
-    M,
-    F,
-    O,
-    N,
-    U
-}
-
-// RFC 6350, 6.7.3
-// TODO: there could be params...
-struct Prodid {
-    value: Text
-}
-
-// RFC 6350, 6.7.4
-// TODO: there could be params...
-struct Rev {
-    value: Timestamp
-}
-
-// RFC 6350, 6.7.6
-// TODO: there could be params... and stuff
-struct Uid;
 
