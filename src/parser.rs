@@ -17,7 +17,18 @@ impl Parser {
 
 }
 
-struct ParserError;
+#[derive(Debug)]
+pub struct ParserError {
+    msg: String
+}
+
+
+impl ParserError {
+    pub fn new(msg: String) -> ParserError {
+        ParserError { msg: msg }
+    }
+}
+
 
 /// A property can be split over multiple lines, e.g.
 /// 
@@ -72,16 +83,14 @@ fn to_property(line: &str) -> Result<Property,ParserError> {
             match c.name("name") {
                 Some(v) => { name = v },
                 None => {
-                    println!("line withouth name: {:?}", line);
-                    return Err(ParserError);
+                    return Err(ParserError::new(format!("line withouth name: {:?}", line)));
                 }
             }
             let value;
             match c.name("value") {
                 Some(v) => { value = v },
                 None => {
-                    println!("line withouth value: {:?}", line);
-                    return Err(ParserError);
+                    return Err(ParserError::new(format!("line withouth value: {:?}", line)));
                 }
             }
 
@@ -89,15 +98,14 @@ fn to_property(line: &str) -> Result<Property,ParserError> {
         }
 
         None => {
-            println!("line withouth match: {:?}", line);
-            return Err(ParserError);
+            return Err(ParserError::new(format!("line withouth match: {:?}", line)));
         }
     }
 
     println!("{:?}", property);
     match property {
         Ok(p) => Ok(p),
-        Err(_) => Err(ParserError)
+        Err(_) => Err(ParserError::new("random erruor".to_string()))
     }
 }
 

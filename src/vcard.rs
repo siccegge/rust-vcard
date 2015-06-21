@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use ::parser::ParserError;
 
 #[derive(Debug)]
 struct VCard {
@@ -33,18 +34,20 @@ pub struct Property {
 }
 
 impl Property {
-    pub fn new_from_strings(group: Option<&str>, name: &str, params: Option<&str>, value: &str) -> Result<Property,PropertyError> {
+    pub fn new_from_strings(group: Option<&str>, name: &str, params: Option<&str>, value: &str) -> Result<Property,ParserError> {
         let group_string = if group.is_some() { Some(group.unwrap().to_string()) } else { None };
 
         let property = match PropertyType::from_str(name).unwrap() {
             PropertyType::Source => Property::new_source(group_string, params, value),
-            _ => Err(PropertyError)
+            PropertyType::Version => Property::new_version(group_string, params, value),
+            PropertyType::N => Property::new_n(group_string, params, value),
+            _ => Err(ParserError::new("Don't understand you".to_string()))
         };
 
         property
     }
 
-    fn new_source(group_string: Option<String>, params: Option<&str>, value: &str) -> Result<Property,PropertyError> {
+    fn new_source(group_string: Option<String>, params: Option<&str>, value: &str) -> Result<Property,ParserError> {
         // the value of a source can only be an URI
         let vuri = ValueType::URI(value.to_string());
         Ok(Property {
@@ -54,12 +57,21 @@ impl Property {
             value: vuri
         })
     }
+
+    fn new_version(group_string: Option<String>, params: Option<&str>, value: &str) -> Result<Property,ParserError> {
+        Ok(Property {
+            group: group_string,
+            ptype: Property::Version,
+            params: if params.is_some() { Some(params.unwrap().to_string()) } else { None },
+            value: ValueType::Text("4".to_string())
+        })
+    }
+
+    fn new_n(group_string: Option<String>, params: Option<&str>, value: &str) -> Result<Property,ParserError> {
+    }
+
+
 }
-
-
-#[derive(Debug)]
-pub struct PropertyError;
-
 
 
 
